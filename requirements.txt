@@ -1,0 +1,19 @@
+# JobBox dependencies (all free / open-source)
+
+# Web dashboard
+Flask==3.0.3
+
+# Gmail API (read-only OAuth)
+google-api-python-client==2.137.0
+google-auth==2.32.0
+google-auth-oauthlib==1.2.1
+
+# HTML email parsing
+beautifulsoup4==4.12.3
+lxml==5.2.2
+
+# Config
+PyYAML==6.0.1
+
+# Date parsing for "posted X hours ago" etc.
+python-dateutil==2.9.0.post0

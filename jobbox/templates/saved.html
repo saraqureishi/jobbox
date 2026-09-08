@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-title">Saved jobs <span class="count-pill">{{ jobs|length }}</span></div>
+
+{% for j in jobs %}
+<div class="job-row" data-search="{{ (j.title ~ ' ' ~ j.company)|lower }}">
+  <div class="job-main">
+    <div class="job-company">
+      {{ j.company or 'Unknown' }}
+      {% if j.early_apply %}<span class="tag tag-early">⚡ &lt;24h</span>{% endif %}
+      {% if j.match_score %}<span class="tag tag-score" title="{{ j.matched_keywords }}">{{ j.match_score }}% match</span>{% endif %}
+    </div>
+    <div class="job-title">
+      {% if j.url %}<a href="{{ j.url }}" target="_blank" rel="noopener">{{ j.title }}</a>{% else %}{{ j.title }}{% endif %}
+    </div>
+  </div>
+  <div class="job-loc">{{ j.location }}</div>
+  <button class="save-btn saved" data-key="{{ j.dedup_key }}" data-saved="1" title="Unsave">★</button>
+</div>
+{% else %}
+<div class="empty">
+  <p>No saved jobs yet.</p>
+  <p class="muted">Click the ☆ on any job to save it here.</p>
+</div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,40 @@
+# Full-time / tech inbox. Copy to config/fulltime.yaml and edit.
+dashboard_title: "JobBox — Full-time / Tech"
+
+credentials_file: "secrets/credentials.json"
+token_file: "secrets/token_{profile}.json"
+
+senders:
+  - "jobalerts-noreply@linkedin.com"
+  - "jobs-noreply@linkedin.com"
+  - "noreply@indeed.com"
+  - "alerts@glassdoor.com"
+  - "noreply@otta.com"
+  - "hello@welcometothejungle.com"
+
+keywords:
+  - "engineer"
+  - "developer"
+  - "data"
+  - "analyst"
+  - "machine learning"
+  - "graduate"
+  - "intern"
+
+exclusions:
+  - "senior director"
+  - "vp of"
+
+cv_keywords:
+  - "python"
+  - "sql"
+  - "snowflake"
+  - "data engineering"
+  - "etl"
+  - "flask"
+  - "pandas"
+  - "git"
+  - "machine learning"
+
+lookback_days: 30
+early_apply_hours: 24

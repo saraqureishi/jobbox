@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+
+{# ---- Application updates (Applied / Interview / Rejected) ---- #}
+{% set auto_statuses = statuses | selectattr('confidence', 'equalto', 'auto') | list %}
+{% if auto_statuses %}
+<section class="card confirm-card">
+  <div class="card-head">
+    <span class="warn-ic">ⓘ</span>
+    <div>
+      <div class="card-title">Did we read these right? <span class="count-pill">{{ auto_statuses|length }}</span></div>
+      <div class="card-sub">We detected these application updates from your email. Tap to confirm.</div>
+    </div>
+  </div>
+  {% for st in auto_statuses %}
+  <div class="confirm-row" data-key="{{ st.key }}">
+    <div class="confirm-info">
+      <div class="company">{{ st.company }}</div>
+      <div class="subj">{{ st.subject }}</div>
+    </div>
+    <span class="badge badge-{{ st.status|lower }}">{{ st.status }}</span>
+    <div class="confirm-actions">
+      <button class="btn btn-yes" data-decision="yes">Yes, correct</button>
+      <button class="btn btn-no" data-decision="no">No, hide</button>
+    </div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{# ---- Confirmed application updates timeline ---- #}
+{% set shown_statuses = statuses | rejectattr('confidence', 'equalto', 'auto') | list %}
+{% if shown_statuses %}
+<section class="card">
+  <div class="card-title">Application updates</div>
+  <div class="card-sub">Detected from your email — JobBox tracks your applications automatically.</div>
+  <div class="updates">
+    {% for st in shown_statuses %}
+    <div class="update-row">
+      <div class="update-bar"></div>
+      <div class="update-info">
+        <div class="company">{{ st.company }}</div>
+        <div class="subj">{{ st.subject }}</div>
+      </div>
+      <span class="badge badge-{{ st.status|lower }}">{{ st.status }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{# ---- Toolbar ---- #}
+<div class="toolbar">
+  <input class="search" id="job-search" type="search" placeholder="Search jobs, companies, locations">
+  <div class="order">
+    <a class="chip {{ 'chip-on' if request.args.get('order')!='score' else '' }}" href="?order=received">Newest</a>
+    <a class="chip {{ 'chip-on' if request.args.get('order')=='score' else '' }}" href="?order=score">Best match</a>
+  </div>
+</div>
+
+{# ---- Jobs grouped by date ---- #}
+{% for label, jobs in groups.items() %}
+<section class="date-group">
+  <div class="date-head"><span class="date-bar"></span>{{ label }} <span class="job-count">{{ jobs|length }} jobs</span></div>
+  {% for j in jobs %}
+  <div class="job-row" data-search="{{ (j.title ~ ' ' ~ j.company ~ ' ' ~ j.location)|lower }}">
+    <div class="job-main">
+      <div class="job-company">
+        {{ j.company or 'Unknown' }}
+        {% if j.early_apply %}<span class="tag tag-early">⚡ &lt;24h</span>{% endif %}
+        {% if j.match_score %}<span class="tag tag-score" title="{{ j.matched_keywords }}">{{ j.match_score }}% match</span>{% endif %}
+      </div>
+      <div class="job-title">
+        {% if j.url %}<a href="{{ j.url }}" target="_blank" rel="noopener">{{ j.title }}</a>{% else %}{{ j.title }}{% endif %}
+      </div>
+    </div>
+    <div class="job-loc">{{ j.location }}</div>
+    <div class="job-src">{{ j.source }}</div>
+    <button class="save-btn {{ 'saved' if j.saved else '' }}"
+            data-key="{{ j.dedup_key }}" data-saved="{{ 1 if j.saved else 0 }}"
+            title="Save job">{{ '★' if j.saved else '☆' }}</button>
+  </div>
+  {% endfor %}
+</section>
+{% else %}
+<div class="empty">
+  <p>No jobs yet.</p>
+  <p class="muted">Run <code>jobbox sync --profile {{ profile }}</code> (or <code>jobbox demo</code>) to populate.</p>
+</div>
+{% endfor %}
+
+{% endblock %}

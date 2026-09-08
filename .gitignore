@@ -1,0 +1,40 @@
+# ---- Secrets & credentials (NEVER commit) ----
+credentials.json
+credentials*.json
+client_secret*.json
+token*.json
+*.token
+.env
+
+# ---- Local data / databases ----
+*.db
+*.sqlite
+*.sqlite3
+data/
+!data/.gitkeep
+
+# ---- User config (may contain personal senders/keywords) ----
+config/*.yaml
+config/*.yml
+!config/*.example.yaml
+!config/*.example.yml
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

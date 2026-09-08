@@ -1,0 +1,59 @@
+# ============================================================
+# JobBox profile config — COPY this file, don't edit it directly.
+#
+#   cp config/profile.example.yaml config/parttime.yaml
+#   cp config/profile.example.yaml config/fulltime.yaml
+#
+# Then run:  jobbox sync --profile parttime
+#            jobbox sync --profile fulltime
+#
+# Each profile maps to ONE Gmail account. The token file is per-profile,
+# so your two inboxes are authorised separately and never share credentials.
+# ============================================================
+
+# Shown in the dashboard header and digests.
+dashboard_title: "JobBox — Part-time"
+
+# --- OAuth credentials ---
+# Download the OAuth client from Google Cloud Console (Desktop app) and save
+# it here. The same client file can be reused across profiles; only the token
+# differs (it is created automatically on first sign-in).
+credentials_file: "secrets/credentials.json"
+token_file: "secrets/token_{profile}.json"   # {profile} -> parttime / fulltime
+
+# --- Which emails to treat as job alerts ---
+# Senders/domains. Leave empty [] to accept every sender and rely on keywords.
+senders:
+  - "jobalerts-noreply@linkedin.com"
+  - "jobs-noreply@linkedin.com"
+  - "noreply@indeed.com"
+  - "alerts@glassdoor.com"
+  - "noreply@otta.com"
+  - "hello@welcometothejungle.com"
+
+# Keep a job only if it matches at least one keyword. Empty [] = keep all.
+keywords:
+  - "part time"
+  - "part-time"
+  - "weekend"
+  - "evening"
+
+# Drop jobs matching any of these.
+exclusions:
+  - "unpaid"
+  - "commission only"
+
+# --- Match scoring: your CV keywords (used to rank jobs by fit) ---
+cv_keywords:
+  - "python"
+  - "sql"
+  - "snowflake"
+  - "data"
+  - "excel"
+  - "customer service"
+
+# How many days of email to scan each sync.
+lookback_days: 30
+
+# Jobs posted within this many hours get the "early apply" flag.
+early_apply_hours: 24

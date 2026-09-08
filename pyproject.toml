@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jobbox"
+version = "0.1.0"
+description = "A free, private, personal job-alert aggregator that reads Gmail (read-only), de-duplicates jobs, auto-detects application status, and serves a web dashboard."
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Sara" }]
+license = { text = "MIT" }
+dependencies = [
+    "Flask>=3.0",
+    "google-api-python-client>=2.130",
+    "google-auth>=2.30",
+    "google-auth-oauthlib>=1.2",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.0",
+    "PyYAML>=6.0",
+    "python-dateutil>=2.9",
+]
+
+[project.scripts]
+jobbox = "jobbox.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["jobbox*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"

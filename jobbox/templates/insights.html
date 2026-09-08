@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-title">Insights</div>
+
+<div class="kpi-grid">
+  <div class="kpi"><div class="kpi-num">{{ counts.get('Applied', 0) }}</div><div class="kpi-label">Applied</div></div>
+  <div class="kpi"><div class="kpi-num">{{ counts.get('Interview', 0) }}</div><div class="kpi-label">Interviews</div></div>
+  <div class="kpi"><div class="kpi-num">{{ counts.get('Rejected', 0) }}</div><div class="kpi-label">Rejections</div></div>
+  <div class="kpi"><div class="kpi-num">{{ response_rate }}%</div><div class="kpi-label">Response rate</div></div>
+</div>
+
+<section class="card">
+  <div class="card-title">Applications per week</div>
+  {% if per_week %}
+  <div class="bars">
+    {% set maxc = (per_week | map(attribute='count') | max) or 1 %}
+    {% for w in per_week %}
+    <div class="bar-col">
+      <div class="bar" style="height: {{ (w.count / maxc * 140)|round(0, 'floor') }}px" title="{{ w.count }} applications"></div>
+      <div class="bar-val">{{ w.count }}</div>
+      <div class="bar-lbl">{{ w.week }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">No applications detected yet.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <div class="card-title">Application funnel</div>
+  <div class="funnel">
+    {% set applied = counts.get('Applied', 0) or 1 %}
+    <div class="funnel-row"><span class="funnel-lbl">Applied</span>
+      <div class="funnel-bar"><span style="width:100%">{{ counts.get('Applied', 0) }}</span></div></div>
+    <div class="funnel-row"><span class="funnel-lbl">Interview</span>
+      <div class="funnel-bar"><span class="fi" style="width:{{ (counts.get('Interview',0)/applied*100)|round(0,'floor') }}%">{{ counts.get('Interview', 0) }}</span></div></div>
+    <div class="funnel-row"><span class="funnel-lbl">Rejected</span>
+      <div class="funnel-bar"><span class="fr" style="width:{{ (counts.get('Rejected',0)/applied*100)|round(0,'floor') }}%">{{ counts.get('Rejected', 0) }}</span></div></div>
+  </div>
+</section>
+{% endblock %}
