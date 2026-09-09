@@ -43,6 +43,14 @@ exclusions:
   - "cook"
   - "construction"
   - "security guard"
+  - "security officer"
+  - "security"
+  - "sia licence"
+  - "sia license"
+  - "door supervisor"
+  - "bell hop"
+  - "bellhop"
+  - "bell boy"
   # No serving / waiting tables
   - "waiter"
   - "waitress"
@@ -61,6 +69,13 @@ exclusions:
   - "unpaid"
   - "commission only"
   - "apprenticeship"
+  # "Reception Teacher" / "Reception Class" = school year, not front-desk work
+  - "reception teacher"
+  - "reception class"
+  - "teacher"
+  - "teaching assistant"
+  - "nursery"
+  - "childminder"
 
 # --- Match scoring: rank by fit to your CV (client-facing, admin, data, AI) ---
 cv_keywords:
