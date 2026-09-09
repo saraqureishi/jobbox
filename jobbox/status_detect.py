@@ -55,10 +55,21 @@ _INTERVIEW_PATTERNS = [
 _APPLIED_PATTERNS = [
     r"thank you for (?:your )?appl(?:ying|ication)",
     r"we(?:'ve| have)? received your application",
-    r"application (?:received|submitted|confirmed)",
+    r"application (?:received|submitted|confirmed|complete)",
     r"your application (?:to|for|has been received)",
     r"successfully applied",
     r"thanks for applying",
+    # Indeed / job-board confirmations
+    r"indeed application[:\s]",
+    r"application (?:was )?(?:sent|submitted) to",
+    r"you applied to",
+    r"you(?:'ve| have) applied",
+    r"we(?:'ll| will) help you get started",
+    # Employer acknowledgement phrasing (e.g. David Lloyd)
+    r"thrilled (?:that )?you(?:'re| are) interested",
+    r"interested in joining (?:our|the) team",
+    r"we(?:'ve| have) got your application",
+    r"application is (?:now )?(?:in|being reviewed)",
 ]
 
 
@@ -105,6 +116,10 @@ def looks_like_application_email(email: EmailMessage) -> bool:
     """Heuristic gate before we try to classify status."""
     domain = email.sender_email.split("@")[-1] if "@" in email.sender_email else ""
     if any(domain.endswith(ats) for ats in ATS_DOMAINS):
+        return True
+    # Job-board "you applied" senders (e.g. Indeed Apply).
+    sender_blob = f"{email.sender} {email.sender_email}".lower()
+    if "indeed" in sender_blob and "appl" in f"{email.subject}".lower():
         return True
     text = _plaintext(email).lower()
     return _any(_REJECTED_RE, text) or _any(_INTERVIEW_RE, text) or _any(_APPLIED_RE, text)

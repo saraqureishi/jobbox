@@ -76,6 +76,13 @@ exclusions:
   - "teaching assistant"
   - "nursery"
   - "childminder"
+  # Hands-on care work (admin roles at care homes are still kept)
+  - "care assistant"
+  - "carer"
+  - "support worker"
+  - "healthcare assistant"
+  - "care worker"
+  - "caregiver"
 
 # --- Match scoring: rank by fit to your CV (client-facing, admin, data, AI) ---
 cv_keywords:
