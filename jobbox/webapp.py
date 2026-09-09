@@ -22,14 +22,23 @@ def _parse_iso(s):
 
 
 def _date_label(d: dt.datetime) -> str:
-    """'Today' / 'Yesterday' / 'Sunday, Sep 6' style grouping like JobBox."""
+    """'Today' / 'Yesterday' / 'Sunday, Sep 6' style grouping like JobBox.
+
+    Avoids platform-specific strftime codes (e.g. '%-d' is not supported on
+    Windows and raises ValueError there), so we format the day number manually.
+    """
     today = dt.datetime.now(tz=dt.timezone.utc).date()
     day = d.date()
     if day == today:
         return "Today"
     if day == today - dt.timedelta(days=1):
         return "Yesterday"
-    return d.strftime("%A, %b %-d") if hasattr(d, "strftime") else str(day)
+    # e.g. "Sunday, Sep 6" — built without %-d / %#d for cross-platform safety.
+    return "{weekday}, {month} {day}".format(
+        weekday=d.strftime("%A"),
+        month=d.strftime("%b"),
+        day=d.day,
+    )
 
 
 def _group_jobs_by_date(jobs: List[dict]) -> "OrderedDict[str, list]":
