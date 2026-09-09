@@ -73,6 +73,45 @@ _APPLIED_PATTERNS = [
 ]
 
 
+# Newsletter / marketing / digest signals. If an email looks like a broadcast
+# (not a personal update about YOUR application), we do NOT classify it — this
+# stops "Application season is approaching!" style emails becoming fake
+# "Interview" statuses.
+_NEWSLETTER_PATTERNS = [
+    r"new roles?\b",
+    r"\d+\s+new (?:jobs?|roles?|opportunit)",
+    r"opportunities from employers",
+    r"jobs? (?:for you|picked for you|that match)",
+    r"application season",
+    r"schemes unpacked",
+    r"webinar",
+    r"upcoming events",
+    r"job alert",
+    r"new match",              # Otta "New match: ..." browse emails
+    r"don'?t fall behind",
+    r"are you ready",
+    r"newsletter",
+    r"this week'?s",
+    r"top (?:picks|jobs)",
+]
+
+# Personal-application signals: strongly indicate a real update about the
+# user's own application. Presence of one of these lets a status through even
+# if a newsletter word is also present.
+_PERSONAL_PATTERNS = [
+    r"your application",
+    r"you applied",
+    r"you(?:'ve| have) applied",
+    r"thank you for (?:your )?appl",
+    r"we received your application",
+    r"regarding your application",
+    r"update on your application",
+    r"your interview",
+    r"interview (?:invitation|invite) ",
+    r"schedule your interview",
+]
+
+
 def _compile(patterns):
     return [re.compile(p, re.IGNORECASE) for p in patterns]
 
@@ -80,6 +119,8 @@ def _compile(patterns):
 _REJECTED_RE = _compile(_REJECTED_PATTERNS)
 _INTERVIEW_RE = _compile(_INTERVIEW_PATTERNS)
 _APPLIED_RE = _compile(_APPLIED_PATTERNS)
+_NEWSLETTER_RE = _compile(_NEWSLETTER_PATTERNS)
+_PERSONAL_RE = _compile(_PERSONAL_PATTERNS)
 
 
 def _any(res, text: str) -> bool:
@@ -131,12 +172,23 @@ def detect_status(email: EmailMessage, profile: str = "") -> Optional[Applicatio
         return None
 
     text = _plaintext(email)
+    is_personal = _any(_PERSONAL_RE, text)
+    is_newsletter = _any(_NEWSLETTER_RE, text)
+
+    # Broadcast/marketing email with no personal-application signal -> skip.
+    # This prevents "X new roles" / "application season" newsletters from being
+    # misread as Applied/Interview updates.
+    if is_newsletter and not is_personal:
+        return None
 
     status = None
     if _any(_REJECTED_RE, text):
         status = STATUS_REJECTED
     elif _any(_INTERVIEW_RE, text):
-        status = STATUS_INTERVIEW
+        # Only trust an "interview" mention if this is clearly a personal email
+        # about the user's own application (avoids advice/newsletter matches).
+        if is_personal:
+            status = STATUS_INTERVIEW
     elif _any(_APPLIED_RE, text):
         status = STATUS_APPLIED
 

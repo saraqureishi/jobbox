@@ -21,6 +21,8 @@ senders:
   - "targetjobs.co.uk"
   - "prospects.ac.uk"
   - "glassdoor.com"
+  - "80000hours.org"
+  - "mailchi.mp"          # 80,000 Hours job board sends via Mailchimp
 # TIP: to scan EVERY sender (widest net for discovery), use:  senders: []
 
 # --- Keep-list: role must match at least one of these ---

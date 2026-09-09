@@ -269,7 +269,20 @@ _JOB_HINT_WORDS = (
 )
 _NON_JOB_LINK = (
     "unsubscribe", "privacy", "manage", "settings", "help", "view in browser",
-    "app store", "google play", "download", "terms", "contact us",
+    "view this email", "app store", "google play", "download", "terms",
+    "contact us", "webinar", "search postgraduate", "search courses",
+    "find a graduate job", "search machine learning courses", "browse",
+    "view all", "see all", "log in", "sign in", "register", "read more",
+    "learn more", "explore", "discover", "advice", "career advice",
+    "postgraduate courses", "open day", "events", "newsletter",
+)
+
+# Titles that are clearly newsletter/marketing/nav noise, not real job posts.
+_NON_JOB_TITLE = re.compile(
+    r"^\s*(?:if\s+mso|<!|</|view this|join our next|search |find a |"
+    r"browse |explore |discover |register|sign in|log in|read more|"
+    r"learn more|view all|see all|\[if|click here|apply now\s*$)\b",
+    re.IGNORECASE,
 )
 
 
@@ -284,6 +297,8 @@ def parse_generic(email: EmailMessage) -> List[Job]:
         if not title or len(title) < 5:
             continue
         if any(w in low for w in _NON_JOB_LINK):
+            continue
+        if _NON_JOB_TITLE.search(title):
             continue
         # Treat as a job if the link text looks like a role.
         if not any(w in low for w in _JOB_HINT_WORDS):
@@ -328,6 +343,9 @@ def _job_from_subject(email: EmailMessage):
     subject = (email.subject or "").strip()
     low = subject.lower()
     if not subject or not any(w in low for w in _JOB_HINT_WORDS):
+        return None
+    # Skip newsletter/marketing/webinar subjects.
+    if _NON_JOB_TITLE.search(subject) or any(w in low for w in _NON_JOB_LINK):
         return None
 
     # Clean common alert prefixes and quoting. Apply repeatedly since alerts

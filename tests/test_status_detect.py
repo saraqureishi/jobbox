@@ -21,8 +21,33 @@ def test_detect_applied():
 
 
 def test_detect_interview():
-    s = detect_status(_email("Next steps", "We'd love to schedule a call for a phone screen."))
+    # A real interview email references the user's own application.
+    s = detect_status(_email(
+        "Your application - next steps",
+        "Regarding your application, we'd love to schedule a call for a phone screen.",
+    ))
     assert s is not None and s.status == STATUS_INTERVIEW
+
+
+def test_newsletter_not_tagged_as_interview():
+    """Marketing/newsletter emails mentioning interviews must be skipped."""
+    s = detect_status(_email(
+        "Application season is fast approaching. Are you ready?",
+        "Don't fall behind! Here are tips to prepare for your interviews this season.",
+        sender_email="ella@brightnetwork.co.uk",
+        sender="Ella @ Bright Network <ella@brightnetwork.co.uk>",
+    ))
+    assert s is None
+
+
+def test_new_roles_digest_not_tagged():
+    s = detect_status(_email(
+        "97 new roles",
+        "View this email in your browser. 97 new roles from employers you follow.",
+        sender_email="jobs@80000hours.org",
+        sender="80,000 Hours <jobs@80000hours.org>",
+    ))
+    assert s is None
 
 
 def test_detect_rejected():
