@@ -17,12 +17,53 @@ from __future__ import annotations
 
 import base64
 import datetime as dt
+import random
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
 
 # Read-only. This is the narrowest scope that lets us read message content.
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+
+# Gmail enforces a per-user "units per minute" quota. Fetching many messages
+# quickly can trip it (HTTP 429/403 rateLimitExceeded). We retry with
+# exponential backoff and pace requests slightly to stay under the limit.
+_RETRYABLE_STATUS = {403, 429, 500, 502, 503, 504}
+_MAX_RETRIES = 6
+_BASE_DELAY = 2.0          # seconds; first backoff wait
+_PACING_DELAY = 0.15       # small gap between message fetches
+
+
+def _execute_with_retry(request):
+    """Execute a Google API request, retrying on rate-limit / transient errors.
+
+    Uses exponential backoff with jitter. Re-raises non-retryable errors and
+    gives up after _MAX_RETRIES attempts.
+    """
+    # Imported lazily so the module loads without googleapiclient installed.
+    from googleapiclient.errors import HttpError
+
+    attempt = 0
+    while True:
+        try:
+            return request.execute()
+        except HttpError as e:
+            status = getattr(getattr(e, "resp", None), "status", None)
+            try:
+                status = int(status)
+            except (TypeError, ValueError):
+                status = None
+            if status not in _RETRYABLE_STATUS or attempt >= _MAX_RETRIES:
+                raise
+            # Exponential backoff with jitter: 2, 4, 8, 16, ... (+random).
+            wait = _BASE_DELAY * (2 ** attempt) + random.uniform(0, 1)
+            print(
+                f"[gmail] Rate limited (HTTP {status}). Waiting {wait:.1f}s "
+                f"then retrying (attempt {attempt + 1}/{_MAX_RETRIES})..."
+            )
+            time.sleep(wait)
+            attempt += 1
 
 
 @dataclass
@@ -149,8 +190,8 @@ class GmailClient:
                 service.users()
                 .messages()
                 .list(userId="me", q=query, maxResults=100, pageToken=page_token)
-                .execute()
             )
+            resp = _execute_with_retry(resp)
             ids.extend(m["id"] for m in resp.get("messages", []))
             page_token = resp.get("nextPageToken")
             if not page_token or len(ids) >= max_results:
@@ -159,12 +200,8 @@ class GmailClient:
 
     def get_message(self, message_id: str) -> EmailMessage:
         service = self._get_service()
-        raw = (
-            service.users()
-            .messages()
-            .get(userId="me", id=message_id, format="full")
-            .execute()
-        )
+        req = service.users().messages().get(userId="me", id=message_id, format="full")
+        raw = _execute_with_retry(req)
         return self._parse_raw(raw)
 
     @staticmethod
@@ -202,7 +239,22 @@ class GmailClient:
         lookback_days: int,
         max_results: int = 500,
     ) -> List[EmailMessage]:
-        """Convenience: build query, list ids, fetch and parse each message."""
+        """Convenience: build query, list ids, fetch and parse each message.
+
+        Paces requests slightly and shows progress. Retries/backoff on rate
+        limits are handled inside get_message via _execute_with_retry.
+        """
         query = self.build_query(senders, lookback_days)
         ids = self.list_message_ids(query, max_results=max_results)
-        return [self.get_message(mid) for mid in ids]
+        total = len(ids)
+        print(f"[gmail] Found {total} messages. Fetching (this can take a moment)...")
+
+        messages: List[EmailMessage] = []
+        for i, mid in enumerate(ids, start=1):
+            messages.append(self.get_message(mid))
+            # Light pacing keeps us under Gmail's per-minute quota.
+            if _PACING_DELAY:
+                time.sleep(_PACING_DELAY)
+            if i % 25 == 0 or i == total:
+                print(f"[gmail]   fetched {i}/{total}")
+        return messages
