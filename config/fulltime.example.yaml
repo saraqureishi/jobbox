@@ -1,40 +1,105 @@
-# Full-time / tech inbox. Copy to config/fulltime.yaml and edit.
+# ============================================================
+# Full-time / tech inbox — tailored for Sara's grad/intern AI & data search.
+# Copy this to config/fulltime.yaml (that copy is git-ignored and private):
+#     copy config\fulltime.example.yaml config\fulltime.yaml
+# ============================================================
+
 dashboard_title: "JobBox — Full-time / Tech"
 
 credentials_file: "secrets/credentials.json"
 token_file: "secrets/token_{profile}.json"
 
+# --- Alert senders for this inbox (grad sites + job boards) ---
+# Matched with Gmail `from:` — partial domains work.
 senders:
-  - "jobalerts-noreply@linkedin.com"
-  - "jobs-noreply@linkedin.com"
-  - "noreply@indeed.com"
-  - "alerts@glassdoor.com"
-  - "noreply@otta.com"
-  - "hello@welcometothejungle.com"
+  - "linkedin.com"
+  - "indeed.com"
+  - "otta.com"
+  - "welcometothejungle.com"
+  - "brightnetwork.co.uk"
+  - "gradcracker.com"
+  - "targetjobs.co.uk"
+  - "prospects.ac.uk"
+  - "glassdoor.com"
+# TIP: to scan EVERY sender (widest net for discovery), use:  senders: []
 
+# --- Keep-list: role must match at least one of these ---
+# Your search is well-defined by role type, so we keep on these and then
+# strip out the red-flag roles via exclusions below.
 keywords:
-  - "engineer"
-  - "developer"
-  - "data"
-  - "analyst"
+  - "data scientist"
+  - "data engineer"
+  - "data analyst"
   - "machine learning"
+  - "ml engineer"
+  - "ai engineer"
+  - "ai "
+  - "analytics"
   - "graduate"
   - "intern"
+  - "junior"
+  - "forward deployed"
 
+# --- Exclusions: your RED FLAGS (skip immediately) ---
 exclusions:
-  - "senior director"
-  - "vp of"
+  # Visa / right-to-work blockers
+  - "no visa sponsorship"
+  - "unable to sponsor"
+  - "cannot sponsor"
+  - "no sponsorship"
+  - "uk citizens only"
+  - "permanent right to work"
+  - "settled status required"
+  - "do not accept graduate"
+  - "psw visa"
+  # Clearance
+  - "sc clearance"
+  - "dv clearance"
+  - "security clearance"
+  - "clearance eligibility"
+  # Over-qualified / senior signals
+  - "phd required"
+  - "phd preferred"
+  - "5+ years"
+  - "5 years"
+  - "6+ years"
+  - "lead "
+  - "staff "
+  - "principal"
+  - "head of"
+  - "director"
+  - "senior"
+  # Deep-systems (not your stack)
+  - "cuda"
+  - "gpu kernel"
+  - "triton"
+  - "distributed training"
+  - "c++"
+  - "golang"
+  - " rust"
+  # Pure quant
+  - "stochastic calculus"
+  - "derivatives pricing"
+  - "quantitative researcher"
 
+# --- Match scoring: your tech CV keywords ---
 cv_keywords:
   - "python"
   - "sql"
   - "snowflake"
-  - "data engineering"
-  - "etl"
-  - "flask"
-  - "pandas"
-  - "git"
   - "machine learning"
+  - "data scientist"
+  - "data engineer"
+  - "data analyst"
+  - "ai engineer"
+  - "ml engineer"
+  - "analytics"
+  - "graduate"
+  - "intern"
+  - "pandas"
+  - "etl"
+  - "nlp"
+  - "deep learning"
 
 lookback_days: 30
 early_apply_hours: 24
