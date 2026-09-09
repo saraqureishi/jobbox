@@ -1,19 +1,31 @@
 # JobBox dependencies (all free / open-source)
+#
+# Version pins use ">=" (a minimum), so pip installs a version with a prebuilt
+# wheel for YOUR Python version. This avoids needing a C++ compiler.
+#
+# TIP: JobBox works best on Python 3.10–3.12. Very new releases (e.g. 3.14) may
+# not have prebuilt wheels for every package yet. If you hit build errors,
+# install Python 3.12 and use:  py -3.12 -m pip install -r requirements.txt
 
 # Web dashboard
-Flask==3.0.3
+Flask>=3.0
 
 # Gmail API (read-only OAuth)
-google-api-python-client==2.137.0
-google-auth==2.32.0
-google-auth-oauthlib==1.2.1
+google-api-python-client>=2.130
+google-auth>=2.30
+google-auth-oauthlib>=1.2
 
 # HTML email parsing
-beautifulsoup4==4.12.3
-lxml==5.2.2
+beautifulsoup4>=4.12
 
 # Config
-PyYAML==6.0.1
+PyYAML>=6.0
 
 # Date parsing for "posted X hours ago" etc.
-python-dateutil==2.9.0.post0
+python-dateutil>=2.9
+
+# --- Optional speed-up ---
+# lxml makes HTML parsing faster but needs a prebuilt wheel or a C compiler.
+# JobBox automatically falls back to Python's built-in parser if it's missing,
+# so this is OPTIONAL. Install it only if it builds cleanly on your system.
+# lxml>=5.0

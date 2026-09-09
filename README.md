@@ -49,8 +49,13 @@ Jobs:     "Did we read these right?" → [Applied] [Interview] [Rejected] confir
 ## 🚀 Quick start
 
 ### 0. Requirements
-- Python 3.9+
+- **Python 3.10–3.12 recommended** (3.9+ works). Very new releases like 3.14
+  may lack prebuilt wheels for some packages — if `pip install` fails trying to
+  compile, install [Python 3.12](https://www.python.org/downloads/) and use
+  `py -3.12 -m pip ...` on Windows.
 - A Google account (for the Gmail you want to read)
+- No C/C++ compiler needed — the optional `lxml` speed-up is skipped
+  automatically if it isn't installed.
 
 ### 1. Install
 

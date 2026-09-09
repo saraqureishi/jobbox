@@ -119,8 +119,19 @@ def _local_context(a) -> str:
     return _text(clone)
 
 
+# Prefer the fast lxml parser if it's installed, but fall back to Python's
+# built-in html.parser so JobBox works with zero compiler/build dependencies
+# (lxml needs prebuilt wheels or a C compiler; html.parser is always available).
+try:
+    import lxml  # noqa: F401
+
+    _BS_PARSER = "lxml"
+except ImportError:  # pragma: no cover
+    _BS_PARSER = "html.parser"
+
+
 def _soup(html: str) -> BeautifulSoup:
-    return BeautifulSoup(html or "", "lxml")
+    return BeautifulSoup(html or "", _BS_PARSER)
 
 
 # ----------------------------------------------------------------------------

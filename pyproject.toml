@@ -16,10 +16,13 @@ dependencies = [
     "google-auth>=2.30",
     "google-auth-oauthlib>=1.2",
     "beautifulsoup4>=4.12",
-    "lxml>=5.0",
     "PyYAML>=6.0",
     "python-dateutil>=2.9",
 ]
+
+[project.optional-dependencies]
+# Optional faster HTML parser; JobBox falls back to the stdlib parser without it.
+fast = ["lxml>=5.0"]
 
 [project.scripts]
 jobbox = "jobbox.cli:main"
