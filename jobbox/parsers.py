@@ -252,9 +252,20 @@ def parse_otta(email: EmailMessage) -> List[Job]:
 # ----------------------------------------------------------------------------
 
 _JOB_HINT_WORDS = (
+    # tech / data
     "engineer", "developer", "analyst", "intern", "manager", "scientist",
-    "designer", "consultant", "assistant", "specialist", "associate",
-    "graduate", "fellow", "coordinator", "lead", "architect", "administrator",
+    "designer", "consultant", "specialist", "associate", "graduate",
+    "fellow", "lead", "architect",
+    # admin / office / customer-facing (part-time / non-tech roles)
+    "administrator", "admin", "assistant", "coordinator", "receptionist",
+    "reception", "front of house", "customer service", "customer support",
+    "customer experience", "advisor", "adviser", "clerk", "data entry",
+    "call handler", "contact centre", "contact center", "concierge",
+    "host", "hostess", "steward", "usher", "ambassador", "invigilator",
+    "note-taker", "notetaker", "mentor", "tutor", "guest services",
+    "guest experience", "guest relations", "visitor experience", "greeter",
+    "meet and greet", "booking", "scheduling", "records", "secretary",
+    "officer", "representative", "agent", "support", "services",
 )
 _NON_JOB_LINK = (
     "unsubscribe", "privacy", "manage", "settings", "help", "view in browser",
@@ -290,7 +301,63 @@ def parse_generic(email: EmailMessage) -> List[Job]:
                 received_at=email.date,
             )
         )
+
+    # Fallback: some alert providers (Reed, NHS Jobs, some Indeed digests) put
+    # the role in the SUBJECT line rather than as clean job links, e.g.
+    # "Added today: new customer service in HA27QN". If we found nothing from
+    # links but the subject looks like a role, capture it from the subject so
+    # keyword filtering and exclusions still work.
+    if not jobs:
+        job_from_subject = _job_from_subject(email)
+        if job_from_subject is not None:
+            jobs.append(job_from_subject)
+
     return _dedupe_within_email(jobs)
+
+
+# Words/prefixes to strip from alert subjects to isolate the role text.
+_SUBJECT_NOISE = re.compile(
+    r"^(added today[:\-]?|new|newest|latest|today'?s?|job alert[:\-]?|"
+    r"jobs? for you[:\-]?|we found|here are|\d+\s+new)\s*",
+    re.IGNORECASE,
+)
+
+
+def _job_from_subject(email: EmailMessage):
+    """Extract a best-effort Job from the email subject line, or None."""
+    subject = (email.subject or "").strip()
+    low = subject.lower()
+    if not subject or not any(w in low for w in _JOB_HINT_WORDS):
+        return None
+
+    # Clean common alert prefixes and quoting. Apply repeatedly since alerts
+    # often stack prefixes, e.g. "Added today: new <role>".
+    cleaned = subject
+    for _ in range(3):
+        new = _SUBJECT_NOISE.sub("", cleaned).strip(" '\"“”‘’")
+        if new == cleaned:
+            break
+        cleaned = new
+    # Drop trailing "jobs & vacancies" style noise.
+    cleaned = re.sub(r"\b(jobs?|vacanc(y|ies))\b.*$", "", cleaned, flags=re.IGNORECASE).strip(" -·|")
+
+    # Pull out a location if the subject has "... in <place>".
+    location = ""
+    m = re.search(r"\bin\s+([A-Za-z0-9 ,]+)$", cleaned)
+    if m:
+        location = m.group(1).strip()
+        cleaned = cleaned[: m.start()].strip(" -·|")
+
+    title = cleaned or subject
+    return Job(
+        company=_sender_name(email),
+        title=title,
+        location=location,
+        url="",
+        source="subject",
+        posted_at=email.date,
+        received_at=email.date,
+    )
 
 
 # ----------------------------------------------------------------------------
@@ -301,7 +368,12 @@ def parse_generic(email: EmailMessage) -> List[Job]:
 _LOCATION_HINTS = re.compile(
     r"\b(remote|hybrid|london|manchester|birmingham|leeds|bristol|edinburgh|"
     r"glasgow|dublin|new york|san francisco|berlin|paris|amsterdam|uk|"
-    r"united kingdom|england|scotland|wales)\b",
+    r"united kingdom|england|scotland|wales|"
+    # Greater London areas / boroughs commonly seen in Reed/Indeed alerts
+    r"harrow|heathrow|wembley|croydon|ealing|barnet|brent|camden|westminster|"
+    r"hounslow|richmond|kingston|watford|uxbridge|greenford|middlesex|"
+    # UK postcode outward codes (e.g. HA2, EC1, SW1) — matches "HA27QN" too
+    r"[a-z]{1,2}\d[a-z\d]?(?:\s?\d[a-z]{2})?)\b",
     re.IGNORECASE,
 )
 

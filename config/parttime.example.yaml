@@ -1,0 +1,87 @@
+# ============================================================
+# Part-time inbox — tailored for Sara's search.
+# Copy this to config/parttime.yaml (that copy is git-ignored and private):
+#     copy config\parttime.example.yaml config\parttime.yaml
+# ============================================================
+
+dashboard_title: "JobBox — Part-time"
+
+credentials_file: "secrets/credentials.json"
+token_file: "secrets/token_{profile}.json"
+
+# --- Alert senders seen in this inbox (Reed, NHS, Indeed, football jobs) ---
+# These are matched with Gmail's `from:` — partial addresses/domains work.
+senders:
+  - "reed.co.uk"
+  - "jobs.nhs.uk"
+  - "indeed.com"
+  - "jobsinfootball"          # "Jobs In Football" alerts
+  - "resourcing"              # "Resourcing Service" alerts
+# TIP: To scan EVERY sender in the inbox (widest net, good for discovery),
+# comment out the list above and use:  senders: []
+
+# --- Keep-list: leave EMPTY to keep everything, then rely on exclusions. ---
+# Your search is defined more by what to AVOID than by required words, so we
+# keep the net wide and exclude the wrong roles below.
+keywords: []
+
+# --- Exclusions: drop anything matching these (your hard NOs) ---
+exclusions:
+  # No manual / labour work
+  - "warehouse"
+  - "labourer"
+  - "labouring"
+  - "picker"
+  - "packer"
+  - "driver"
+  - "forklift"
+  - "cleaner"
+  - "cleaning"
+  - "porter"
+  - "kitchen"
+  - "chef"
+  - "cook"
+  - "construction"
+  - "security guard"
+  # No serving / waiting tables
+  - "waiter"
+  - "waitress"
+  - "waiting staff"
+  - "server"
+  - "barista"
+  # No alcohol venues
+  - "bar staff"
+  - "bartender"
+  - "bar tender"
+  - "pub"
+  - "nightclub"
+  - "bar back"
+  - "cocktail"
+  # Not relevant
+  - "unpaid"
+  - "commission only"
+  - "apprenticeship"
+
+# --- Match scoring: rank by fit to your CV (client-facing, admin, data, AI) ---
+cv_keywords:
+  - "customer service"
+  - "customer support"
+  - "customer experience"
+  - "administrator"
+  - "admin"
+  - "receptionist"
+  - "front of house"
+  - "coordinator"
+  - "call handler"
+  - "contact centre"
+  - "data entry"
+  - "data"
+  - "student ambassador"
+  - "invigilator"
+  - "guest experience"
+  - "concierge"
+  - "excel"
+  - "python"
+
+lookback_days: 30
+early_apply_hours: 24
