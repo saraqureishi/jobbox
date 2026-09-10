@@ -52,24 +52,34 @@ _INTERVIEW_PATTERNS = [
     r"assessment (?:centre|center)",
     r"take[- ]home",
 ]
-_APPLIED_PATTERNS = [
-    r"thank you for (?:your )?appl(?:ying|ication)",
+# STRONG applied signals: an unambiguous "we got your application" confirmation
+# from an employer/ATS. These are trusted even if the email also contains
+# generic newsletter words, because a real confirmation is unmistakable.
+_APPLIED_STRONG_PATTERNS = [
+    r"thank(?:s| you)? for (?:your )?appl(?:ying|ication)",
+    r"thank you for applying to",
+    r"thanks for your (?:job )?application",
+    r"thank you for your submission",
+    r"thank you for your interest in the .{0,40}\brole\b",
     r"we(?:'ve| have)? received your application",
     r"application (?:received|submitted|confirmed|complete)",
-    r"your application (?:to|for|has been received)",
+    r"your application (?:to|for|has been received|is complete)",
     r"successfully applied",
-    r"thanks for applying",
-    # Indeed / job-board confirmations
+    r"we(?:'ve| have) got your application",
+    r"we(?:'ll| will) review your application",
+    r"application is (?:now )?(?:in|being reviewed)",
+    # Job-board confirmations
     r"indeed application[:\s]",
     r"application (?:was )?(?:sent|submitted) to",
     r"you applied to",
     r"you(?:'ve| have) applied",
+]
+
+# WEAKER applied signals — only trusted when NOT in a newsletter/browse email.
+_APPLIED_WEAK_PATTERNS = [
     r"we(?:'ll| will) help you get started",
-    # Employer acknowledgement phrasing (e.g. David Lloyd)
     r"thrilled (?:that )?you(?:'re| are) interested",
     r"interested in joining (?:our|the) team",
-    r"we(?:'ve| have) got your application",
-    r"application is (?:now )?(?:in|being reviewed)",
 ]
 
 
@@ -78,21 +88,25 @@ _APPLIED_PATTERNS = [
 # stops "Application season is approaching!" style emails becoming fake
 # "Interview" statuses.
 _NEWSLETTER_PATTERNS = [
-    r"new roles?\b",
+    r"\bnew roles?\b",
     r"\d+\s+new (?:jobs?|roles?|opportunit)",
     r"opportunities from employers",
+    r"latest opportunities",
     r"jobs? (?:for you|picked for you|that match)",
+    r"your (?:latest )?(?:job )?(?:update|alert)",
     r"application season",
     r"schemes unpacked",
     r"webinar",
     r"upcoming events",
     r"job alert",
-    r"new match",              # Otta "New match: ..." browse emails
+    r"new match(?:es)?[:\s]",   # Otta/WTTJ "New match: ..." browse emails
     r"don'?t fall behind",
     r"are you ready",
     r"newsletter",
     r"this week'?s",
     r"top (?:picks|jobs)",
+    r"reactivate your premium",
+    r"you shared some .* account data",
 ]
 
 # Personal-application signals: strongly indicate a real update about the
@@ -118,7 +132,8 @@ def _compile(patterns):
 
 _REJECTED_RE = _compile(_REJECTED_PATTERNS)
 _INTERVIEW_RE = _compile(_INTERVIEW_PATTERNS)
-_APPLIED_RE = _compile(_APPLIED_PATTERNS)
+_APPLIED_STRONG_RE = _compile(_APPLIED_STRONG_PATTERNS)
+_APPLIED_WEAK_RE = _compile(_APPLIED_WEAK_PATTERNS)
 _NEWSLETTER_RE = _compile(_NEWSLETTER_PATTERNS)
 _PERSONAL_RE = _compile(_PERSONAL_PATTERNS)
 
@@ -153,50 +168,67 @@ def _guess_company(email: EmailMessage) -> str:
     return base.capitalize()
 
 
-def looks_like_application_email(email: EmailMessage) -> bool:
-    """Heuristic gate before we try to classify status."""
-    domain = email.sender_email.split("@")[-1] if "@" in email.sender_email else ""
-    if any(domain.endswith(ats) for ats in ATS_DOMAINS):
-        return True
-    # Job-board "you applied" senders (e.g. Indeed Apply).
-    sender_blob = f"{email.sender} {email.sender_email}".lower()
-    if "indeed" in sender_blob and "appl" in f"{email.subject}".lower():
-        return True
-    text = _plaintext(email).lower()
-    return _any(_REJECTED_RE, text) or _any(_INTERVIEW_RE, text) or _any(_APPLIED_RE, text)
-
-
 def detect_status(email: EmailMessage, profile: str = "") -> Optional[ApplicationStatus]:
-    """Classify a single email into an ApplicationStatus, or None."""
-    if not looks_like_application_email(email):
-        return None
+    """Classify a single email into an ApplicationStatus, or None.
 
+    Priority (highest first):
+      1. STRONG applied confirmation ("thank you for applying") -> Applied.
+         Trusted even alongside newsletter words, because it's unmistakable.
+      2. Rejection phrases -> Rejected.
+      3. Personal interview invite -> Interview.
+      4. Weak applied signal, only if NOT a newsletter/browse email -> Applied.
+    Anything that is only a newsletter/browse/digest -> None.
+    """
     text = _plaintext(email)
-    is_personal = _any(_PERSONAL_RE, text)
     is_newsletter = _any(_NEWSLETTER_RE, text)
+    is_personal = _any(_PERSONAL_RE, text)
 
-    # Broadcast/marketing email with no personal-application signal -> skip.
-    # This prevents "X new roles" / "application season" newsletters from being
-    # misread as Applied/Interview updates.
-    if is_newsletter and not is_personal:
-        return None
+    # 1) Rejection first: "unfortunately / regret to inform / not successful"
+    #    is specific and should win even when the email also thanks you for
+    #    applying (rejections often open politely). Skip if clearly a newsletter.
+    if _any(_REJECTED_RE, text) and not is_newsletter:
+        return _make(email, STATUS_REJECTED, profile)
 
-    status = None
-    if _any(_REJECTED_RE, text):
-        status = STATUS_REJECTED
-    elif _any(_INTERVIEW_RE, text):
-        # Only trust an "interview" mention if this is clearly a personal email
-        # about the user's own application (avoids advice/newsletter matches).
-        if is_personal:
-            status = STATUS_INTERVIEW
-    elif _any(_APPLIED_RE, text):
-        status = STATUS_APPLIED
+    # 2) Strong "we got your application" confirmation.
+    if _any(_APPLIED_STRONG_RE, text):
+        return _make(email, STATUS_APPLIED, profile)
 
-    if status is None:
-        return None
+    # 3) Interview — only when clearly personal AND not a browse/"new match".
+    if _any(_INTERVIEW_RE, text) and is_personal and not is_newsletter:
+        return _make(email, STATUS_INTERVIEW, profile)
 
+    # 4) Weak applied signal, only outside newsletters.
+    if _any(_APPLIED_WEAK_RE, text) and not is_newsletter:
+        return _make(email, STATUS_APPLIED, profile)
+
+    return None
+
+
+def _from_ats(email: EmailMessage) -> bool:
+    domain = email.sender_email.split("@")[-1] if "@" in email.sender_email else ""
+    return any(domain.endswith(ats) for ats in ATS_DOMAINS)
+
+
+def _company_from_subject(email: EmailMessage) -> str:
+    """Pull a company from subjects like 'Thank you for applying to <Company>'."""
+    subj = email.subject or ""
+    m = re.search(r"appl(?:ying|ication)\s+to\s+([A-Z][\w&.\- ]{1,40})", subj)
+    if m:
+        # Trim a trailing " - <role>" so "Eaton - Data Analyst Intern" -> "Eaton".
+        return m.group(1).split(" - ")[0].split(" \u2013 ")[0].strip(" -|.")
+    m = re.search(r"from\s+([A-Z][\w&.\- ]{1,40})\s+[-–]", subj)  # "From Abound - thanks..."
+    if m:
+        return m.group(1).strip(" -|.")
+    m = re.search(r"\|\s*([A-Z][\w&.\- ]{1,40})\s*$", subj)       # "... | Lendable"
+    if m:
+        return m.group(1).strip(" -|.")
+    return ""
+
+
+def _make(email: EmailMessage, status: str, profile: str) -> ApplicationStatus:
+    company = _company_from_subject(email) or _guess_company(email) or "Unknown"
     return ApplicationStatus(
-        company=_guess_company(email) or "Unknown",
+        company=company,
         status=status,
         profile=profile,
         email_id=email.id,

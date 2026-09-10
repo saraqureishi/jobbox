@@ -83,6 +83,11 @@ exclusions:
   - "stochastic calculus"
   - "derivatives pricing"
   - "quantitative researcher"
+  # Unpaid / non-jobs (Prospects "work experience" landing pages)
+  - "unpaid"
+  - "work experience"
+  - "postgraduate courses"
+  - "the intern group"
 
 # --- Match scoring: your tech CV keywords ---
 cv_keywords:
