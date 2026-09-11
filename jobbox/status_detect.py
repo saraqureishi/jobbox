@@ -142,13 +142,43 @@ def _any(res, text: str) -> bool:
     return any(r.search(text) for r in res)
 
 
+def _html_to_text(html: str) -> str:
+    """Robustly convert HTML email bodies to clean text for phrase matching.
+
+    Uses BeautifulSoup (already a dependency) so tags are removed, HTML
+    entities (&nbsp;, &amp; ...) are decoded, and <script>/<style> noise is
+    dropped. Whitespace is collapsed so phrases split across tags (e.g.
+    "Thank you for<br>applying") match reliably.
+    """
+    if not html:
+        return ""
+    try:
+        from bs4 import BeautifulSoup
+
+        try:
+            import lxml  # noqa: F401
+            parser = "lxml"
+        except ImportError:
+            parser = "html.parser"
+        soup = BeautifulSoup(html, parser)
+        for tag in soup(["script", "style"]):
+            tag.extract()
+        text = soup.get_text(" ")
+    except Exception:
+        # Fallback: strip tags crudely if BeautifulSoup is unavailable.
+        text = re.sub(r"<[^>]+>", " ", html)
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def _plaintext(email: EmailMessage) -> str:
-    """Return a text blob (subject + body) suitable for phrase matching."""
-    body = email.text_body
-    if not body and email.html_body:
-        # Cheap tag strip; good enough for phrase detection.
-        body = re.sub(r"<[^>]+>", " ", email.html_body)
-    return f"{email.subject}\n{body}"
+    """Return a text blob (subject + snippet + body) for phrase matching.
+
+    Includes the Gmail snippet too, since it often carries the opening line of
+    the email ("Thank you for applying...") even when the body is heavy HTML.
+    """
+    body = email.text_body or _html_to_text(email.html_body)
+    snippet = email.snippet or ""
+    return f"{email.subject}\n{snippet}\n{body}"
 
 
 def _guess_company(email: EmailMessage) -> str:
