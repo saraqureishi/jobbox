@@ -17,11 +17,48 @@ from .config import available_profiles, ensure_dirs, load_profile
 from .pipeline import sync_profile
 
 
+def _delete_db(cfg) -> None:
+    """Delete a profile's database file so the next sync rebuilds it cleanly.
+
+    Clears out any stale jobs/statuses detected by older code. Handles the
+    case where the file is missing; warns clearly if it's locked (e.g. a
+    server is still running and holding it open on Windows).
+    """
+    db = cfg.resolved_db_file()
+    if not db.exists():
+        print(f"[reset] No existing database at {db} (nothing to clear).")
+        return
+    try:
+        db.unlink()
+        print(f"[reset] Cleared old database: {db}")
+    except PermissionError:
+        print(
+            f"[reset] ERROR: could not delete {db} — it looks like it's open.\n"
+            f"[reset] Stop any running 'serve' (press Ctrl+C in that window / "
+            f"close the dashboard) and try again."
+        )
+        raise SystemExit(1)
+
+
+def _cmd_reset(args) -> int:
+    """One-step clean rebuild: delete the DB, then re-sync from Gmail."""
+    cfg = load_profile(args.profile)
+    print(f"[reset] Profile '{cfg.name}' — clearing old data and re-syncing...")
+    _delete_db(cfg)
+    return _run_sync(cfg, args.max)
+
+
 def _cmd_sync(args) -> int:
     cfg = load_profile(args.profile)
+    if getattr(args, "clear", False):
+        _delete_db(cfg)
     print(f"[sync] Profile '{cfg.name}' — reading Gmail (all tabs), lookback "
           f"{cfg.lookback_days} days...")
-    result = sync_profile(cfg, max_results=args.max)
+    return _run_sync(cfg, args.max)
+
+
+def _run_sync(cfg, max_results) -> int:
+    result = sync_profile(cfg, max_results=max_results)
     print(f"[sync] Emails read : {result.emails_read}")
     print(f"[sync] Jobs found  : {result.jobs_found}  (new: {result.jobs_new})")
     print(f"[sync] Statuses    : {result.statuses_found}  (new: {result.statuses_new})")
@@ -86,7 +123,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_sync = sub.add_parser("sync", help="Read Gmail and update the local DB.")
     p_sync.add_argument("--profile", required=True, help="Profile name (e.g. parttime, fulltime)")
     p_sync.add_argument("--max", type=int, default=500, help="Max emails to read")
+    p_sync.add_argument("--clear", action="store_true",
+                        help="Wipe stored jobs/statuses first (clean rebuild)")
     p_sync.set_defaults(func=_cmd_sync)
+
+    p_reset = sub.add_parser(
+        "reset", help="Clear stored data and re-sync in one step (clean rebuild).")
+    p_reset.add_argument("--profile", required=True, help="Profile name")
+    p_reset.add_argument("--max", type=int, default=500, help="Max emails to read")
+    p_reset.set_defaults(func=_cmd_reset)
 
     p_demo = sub.add_parser("demo", help="Seed the DB with demo data (no Gmail).")
     p_demo.add_argument("--profile", default="demo", help="Profile name to seed")
